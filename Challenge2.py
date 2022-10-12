@@ -9,34 +9,32 @@
 # to collect the information about the infrastructure.
 
 import boto3
-import json
 from flask import Flask, render_template
 from datetime import datetime
 
 app = Flask("Challenge_2")
 
 client = boto3.client('ec2')
-#private_subnet_id = [subnet['SubnetId'] for subnet in subnets_response['Subnets'] if subnet['Tags'] == tag]
 #tag = [{"Key" : "Name", "Value" : "Private-1"}]
-
-subnets_response = client.describe_subnets(Filters=[
-    {'Name': 'tag:Name', 'Values': ['Private-1']}])
-
-instances_response = client.describe_instances(Filters=[
-    {'Name': 'instance-state-name', 'Values': ['running']}, 
-    {'Name': 'subnet-id', 'Values': [f'{subnets_response["Subnets"][0]["SubnetId"]}']},
-    ]
-)
-
-running_instances_names = []
-
-for reservation in instances_response['Reservations']:
-    for instance in reservation['Instances']:
-        running_instances_names.append([instance['Tags'][0]['Value'], instance['LaunchTime'].strftime("%d/%m/%Y, %H:%M:%S")])
+#private_subnet_id = [subnet['SubnetId'] for subnet in subnets_response['Subnets'] if subnet['Tags'] == tag]
 
 @app.route("/")
 def get_running_instances():
-    #return instances_response
+    running_instances_names = []
+
+    subnets_response = client.describe_subnets(Filters=[
+    {'Name': 'tag:Name', 'Values': ['Private-1']}])['Subnets'][0]
+
+    instances_response = client.describe_instances(Filters=[
+        {'Name': 'instance-state-name', 'Values': ['running']}, 
+        {'Name': 'subnet-id', 'Values': [f'{subnets_response["SubnetId"]}']},
+        ]
+    )
+
+    for reservation in instances_response['Reservations']:
+        for instance in reservation['Instances']:
+            running_instances_names.append([instance['Tags'][0]['Value'], instance['LaunchTime'].strftime("%d/%m/%Y, %H:%M:%S")])
+
     return render_template("index.html.tpl", instances_names = running_instances_names)
 
 if __name__ == "__main__":
